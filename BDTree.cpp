@@ -7,8 +7,10 @@
 #include "BDTree.h"
 #include "BDTNode.h"
 
+const string BDTree::OPS("()|&!>=");
+
 BDTree::BDTree(string& formula)
-        : OPS("()|&!>="), _root(nullptr), _formula(formula) {
+        : _root(nullptr), _formula(formula) {
 
     for (unsigned long i = 0; i < _formula.size(); ++i){
         string str(_formula.substr(i, 1));
@@ -19,11 +21,7 @@ BDTree::BDTree(string& formula)
     string name = _names.substr(0, 1);
     string names = _names.substr(1, _names.size() - 1);
     _root = shared_ptr<BDTNode>(new BDTNode(name));
-    _root->generateChildren(_root, names, _leafs);
-
-    for (int j = 0; j < _leafs.size(); ++j) {
-        _leafs[j]->parseFormula(_formula);
-    }
+    _root->generateChildren(formula, _root, names, _leafs);
 }
 
 BDTree::~BDTree() { }
@@ -62,19 +60,18 @@ string BDTree::toString(){
         vector<BDTParent> path;
         _leafs[i]->paths_from_root(paths, path);
 
-        string s_path = "";
+        string s_path = _leafs[i]->getValue() == "0" ? "false:{\n" : "true:{\n";
         for (int j = 0; j < paths.size(); ++j) {
             path = paths[j];
-            s_path += "{";
+            s_path += "\t case " + to_string(j + 1) + ": ";
             for (int k = 0; k < path.size(); ++k) {
                 BDTParent node = path[k];
                 if (!node.getParent()->isTerminal())
                     s_path += "(" + node.getParent()->getValue() + to_string(node.getBranch()) + ")";
             }
-            s_path += "} = ";
+            s_path += "\n";
         }
-        s_path += "{" + _leafs[i]->getValue() + "}";
-        s_path += "\n";
+        s_path += "}\n";
 
         s_paths += s_path;
     }

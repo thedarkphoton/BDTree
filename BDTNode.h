@@ -16,10 +16,11 @@ class BDTParent;
 class BDTNode {
     vector<BDTParent> _parents;
     shared_ptr<BDTNode> _self;
-    shared_ptr<BDTNode> _falseChild;
-    shared_ptr<BDTNode> _trueChild;
+    shared_ptr<BDTNode> _left;
+    shared_ptr<BDTNode> _right;
     string _value;
 
+    string substituteVariable(string formula, string var, string sub);
 protected:
 
 public:
@@ -27,7 +28,7 @@ public:
     BDTNode(BDTParent parent, string& name);
     ~BDTNode();
 
-    void generateChildren(shared_ptr<BDTNode>& self, string& names, vector<shared_ptr<BDTNode> >& leafs);
+    void generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, vector<shared_ptr<BDTNode> >& leafs);
     void setSelf(shared_ptr<BDTNode>& self);
 
     void paths_from_root(vector<vector<BDTParent> >& paths, vector<BDTParent>& path);
@@ -44,11 +45,11 @@ public:
     unsigned long getParentCount();
     BDTParent& getParent(int index);
 
-    bool setFalseChild(shared_ptr<BDTNode>& child);
-    shared_ptr<BDTNode>& getFalseChild();
+    bool setLeft(shared_ptr<BDTNode>& child);
+    shared_ptr<BDTNode>& getLeft();
 
-    bool setTrueChild(shared_ptr<BDTNode>& child);
-    shared_ptr<BDTNode>& getTrueChild();
+    bool setTrue(shared_ptr<BDTNode>& child);
+    shared_ptr<BDTNode>& getTrue();
 
     bool isTerminal();
     bool isInternal();

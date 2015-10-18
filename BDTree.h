@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "BDTNode.h"
 
 using namespace std;
 
@@ -18,7 +17,7 @@ class BDTree {
     shared_ptr<BDTNode> _root;
     vector<shared_ptr<BDTNode>> _leafs;
 
-    const string OPS;
+    static const string OPS;
     string _formula;
     string _names;
 
