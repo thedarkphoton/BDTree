@@ -6,6 +6,24 @@
 
 #include "BDTNode.h"
 
+void merge_nodes(vector<shared_ptr<BDTNode> >& removed_nodes, shared_ptr<BDTNode>& internal_node, shared_ptr<BDTNode>& node){
+    vector<BDTParent> parents = internal_node->getParents();
+    for (int j = 0; j < parents.size(); ++j) {
+        shared_ptr<BDTNode> p = parents[j].getParent();
+        if (parents[j].getBranch()){
+            p->getRight()->removeParentRecursive(p);
+            p->setRight(node);
+            node->addParent(p, true);
+        }
+        else{
+            p->getLeft()->removeParentRecursive(p);
+            p->setLeft(node);
+            node->addParent(p, false);
+        }
+    }
+    removed_nodes.push_back(internal_node);
+}
+
 BDTNode::BDTNode(string& name)
         : _value(name), _left(nullptr), _right(nullptr), _self(nullptr) { }
 
@@ -15,7 +33,7 @@ BDTNode::BDTNode(BDTParent parent, string& name)
     _parents.push_back(parent);
 }
 
-void BDTNode::generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, shared_ptr<BDTNode>& leaf_left, shared_ptr<BDTNode>& leaf_right) {
+void BDTNode::generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, shared_ptr<BDTNode>& leaf_left, shared_ptr<BDTNode>& leaf_right, vector<shared_ptr<BDTNode> >& internal_nodes) {
     _self = self;
 
     if (names != ""){
@@ -23,14 +41,14 @@ void BDTNode::generateChildren(string formula, shared_ptr<BDTNode>& self, string
         string new_names = names.substr(1, names.size() - 1);
 
         string leftFormula = substituteVariable(formula, _value, "0");
-        shared_ptr<BDTNode> left1(new BDTNode(BDTParent(_self, false), name));
-        setLeft(left1);
-        left1->generateChildren(leftFormula, getLeft(), new_names, leaf_left, leaf_right);
+        shared_ptr<BDTNode> left(new BDTNode(BDTParent(_self, false), name));
+        setLeft(left);
+        left->generateChildren(leftFormula, getLeft(), new_names, leaf_left, leaf_right, internal_nodes);
 
         string rightFormula = substituteVariable(formula, _value, "1");
-        shared_ptr<BDTNode> right1(new BDTNode(BDTParent(_self, true), name));
-        setRight(right1);
-        right1->generateChildren(rightFormula, getTrue(), new_names, leaf_left, leaf_right);
+        shared_ptr<BDTNode> right(new BDTNode(BDTParent(_self, true), name));
+        setRight(right);
+        right->generateChildren(rightFormula, getRight(), new_names, leaf_left, leaf_right, internal_nodes);
     }
     else{
         string leftFormula = substituteVariable(formula, _value, "0");
@@ -56,7 +74,9 @@ void BDTNode::generateChildren(string formula, shared_ptr<BDTNode>& self, string
         }
     }
 
-    minimize();
+    minimize(internal_nodes);
+    if (!isTerminal())
+        internal_nodes.push_back(_self);
 }
 
 void BDTNode::setSelf(shared_ptr<BDTNode>& self) {
@@ -77,7 +97,7 @@ bool BDTNode::setRight(shared_ptr<BDTNode>& child) {
     _right = child;
     return true;
 }
-shared_ptr<BDTNode>& BDTNode::getTrue() {
+shared_ptr<BDTNode>& BDTNode::getRight() {
     return _right;
 }
 
@@ -95,6 +115,30 @@ bool BDTNode::removeParent(shared_ptr<BDTNode>& node, bool branch) {
     _parents.erase(remove(_parents.begin(), _parents.end(), parent), _parents.end());
     return false;
 }
+bool BDTNode::removeParent(shared_ptr<BDTNode>& node) {
+    BDTParent parent_a(node, false);
+    _parents.erase(remove(_parents.begin(), _parents.end(), parent_a), _parents.end());
+
+    BDTParent parent_b(node, true);
+    _parents.erase(remove(_parents.begin(), _parents.end(), parent_b), _parents.end());
+
+    return false;
+}
+bool BDTNode::removeParentRecursive(shared_ptr<BDTNode>& node) {
+    BDTParent parent_a(node, false);
+    _parents.erase(remove(_parents.begin(), _parents.end(), parent_a), _parents.end());
+
+    BDTParent parent_b(node, true);
+    _parents.erase(remove(_parents.begin(), _parents.end(), parent_b), _parents.end());
+
+    if (!isTerminal() && _parents.size() == 0){
+        _left->removeParentRecursive(_self);
+        _right->removeParentRecursive(_self);
+    }
+
+    return false;
+}
+
 unsigned long BDTNode::getParentCount() {
     return _parents.size();
 }
@@ -254,20 +298,25 @@ string BDTNode::evaluateFormula(string formula) {
     return formula.substr(0, 1);
 }
 
-void BDTNode::minimize() {
-    if (_left->isTerminal() && _right->isTerminal() && _left->getValue() == _right->getValue()){
+void BDTNode::minimize(vector<shared_ptr<BDTNode> >& internal_nodes) {
+    vector<shared_ptr<BDTNode> > removed_nodes;
+    string nodea = _left->toString();
+    string nodeb = _right->toString();
+    if (nodea == nodeb){
         for (int i = 0; i < _parents.size(); ++i) {
             shared_ptr<BDTNode> parent = _parents[i].getParent();
             bool branch = _parents[i].getBranch();
 
-            _left->removeParent(_self, true);
-            _left->removeParent(_self, false);
+            _right->removeParent(_self);
 
             if (branch)
-                parent->setRight(_left);
+                parent->setRight(_right);
             else
-                parent->setLeft(_left);
-            _left->addParent(parent, _parents[i].getBranch());
+                parent->setLeft(_right);
+            _right->addParent(parent, _parents[i].getBranch());
+
+            _left->removeParentRecursive(_self);
+            removed_nodes.push_back(_right);
         }
 
         if (isRoot()){
@@ -281,89 +330,109 @@ void BDTNode::minimize() {
             setLeft(null);
         }
     }
-}
-
-pair<string, bool> BDTNode::minimize(shared_ptr<BDTNode>& falseChild, shared_ptr<BDTNode>& trueChild) {
-    if (isTerminal())
-        return make_pair(_value, true);
     else{
-        pair<string, bool> a = getLeft()->minimize(falseChild, trueChild);
-        pair<string, bool> b = getTrue()->minimize(falseChild, trueChild);
-
-        if (a.second && b.second && a.first == b.first){
-            for (int i = 0; i < _parents.size(); ++i) {
-                shared_ptr<BDTNode> parent = _parents[i].getParent();
-                bool branch = _parents[i].getBranch();
-
-                shared_ptr<BDTNode> null(nullptr);
-                setRight(null);
-                setLeft(null);
-
-                if (a.first == "0"){
-                    falseChild->removeParent(_self, true);
-                    falseChild->removeParent(_self, false);
-                    if (branch)
-                        parent->setRight(falseChild);
-                    else
-                        parent->setLeft(falseChild);
-                    falseChild->addParent(parent, _parents[i].getBranch());
-                }
-                else if (a.first == "1"){
-                    trueChild->removeParent(_self, true);
-                    trueChild->removeParent(_self, false);
-                    if (branch)
-                        parent->setRight(trueChild);
-                    else
-                        parent->setLeft(trueChild);
-                    trueChild->addParent(parent, _parents[i].getBranch());
-                }
-            }
-
-            if (isRoot()){
-                shared_ptr<BDTNode> null(nullptr);
-                setLeft(null);
-                setRight(null);
-
-                if (a.first == "0"){
-                    falseChild->removeParent(_self, true);
-                    falseChild->removeParent(_self, false);
-                    falseChild->addParent(_self, false);
-                }
-                else if (a.first == "1"){
-                    trueChild->removeParent(_self, true);
-                    trueChild->removeParent(_self, false);
-                    trueChild->addParent(_self, false);
-                }
-            }
-
-            return make_pair(a.first, true);
-        }
-        else {
-            if (a.second){
-                if (a.first == "0"){
-                    setLeft(falseChild);
-                    falseChild->addParent(_self, false);
-                }
-                else if (a.first == "1"){
-                    setLeft(trueChild);
-                    trueChild->addParent(_self, false);
-                }
-            }
-
-            if (b.second){
-                if (b.first == "0"){
-                    setRight(falseChild);
-                    falseChild->addParent(_self, true);
-                }
-                else if (b.first == "1"){
-                    setRight(trueChild);
-                    trueChild->addParent(_self, true);
-                }
-            }
-            return make_pair(_value, false);
+        for (int i = 0; i < internal_nodes.size(); ++i) {
+            string node = internal_nodes[i]->toString();
+            if (internal_nodes[i] != _left && node == nodea)
+                merge_nodes(removed_nodes, internal_nodes[i], _left);
+            else if (internal_nodes[i] != _right && node == nodeb)
+                merge_nodes(removed_nodes, internal_nodes[i], _right);
         }
     }
+
+    for (int j = 0; j < removed_nodes.size(); ++j) {
+        internal_nodes.erase(
+                remove(
+                        internal_nodes.begin(),
+                        internal_nodes.end(),
+                        removed_nodes[j]
+                ),
+                internal_nodes.end()
+        );
+    }
 }
+
+//pair<string, bool> BDTNode::minimize(shared_ptr<BDTNode>& falseChild, shared_ptr<BDTNode>& trueChild) {
+//    if (isTerminal())
+//        return make_pair(_value, true);
+//    else{
+//        pair<string, bool> a = getLeft()->minimize(falseChild, trueChild);
+//        pair<string, bool> b = getTrue()->minimize(falseChild, trueChild);
+//
+//        if (a.second && b.second && a.first == b.first){
+//            for (int i = 0; i < _parents.size(); ++i) {
+//                shared_ptr<BDTNode> parent = _parents[i].getParent();
+//                bool branch = _parents[i].getBranch();
+//
+//                shared_ptr<BDTNode> null(nullptr);
+//                setRight(null);
+//                setLeft(null);
+//
+//                if (a.first == "0"){
+//                    falseChild->removeParent(_self, true);
+//                    falseChild->removeParent(_self, false);
+//                    if (branch)
+//                        parent->setRight(falseChild);
+//                    else
+//                        parent->setLeft(falseChild);
+//                    falseChild->addParent(parent, _parents[i].getBranch());
+//                }
+//                else if (a.first == "1"){
+//                    trueChild->removeParent(_self, true);
+//                    trueChild->removeParent(_self, false);
+//                    if (branch)
+//                        parent->setRight(trueChild);
+//                    else
+//                        parent->setLeft(trueChild);
+//                    trueChild->addParent(parent, _parents[i].getBranch());
+//                }
+//            }
+//
+//            if (isRoot()){
+//                shared_ptr<BDTNode> null(nullptr);
+//                setLeft(null);
+//                setRight(null);
+//
+//                if (a.first == "0"){
+//                    falseChild->removeParent(_self, true);
+//                    falseChild->removeParent(_self, false);
+//                    falseChild->addParent(_self, false);
+//                }
+//                else if (a.first == "1"){
+//                    trueChild->removeParent(_self, true);
+//                    trueChild->removeParent(_self, false);
+//                    trueChild->addParent(_self, false);
+//                }
+//            }
+//
+//            return make_pair(a.first, true);
+//        }
+//        else {
+//            if (a.second){
+//                if (a.first == "0"){
+//                    setLeft(falseChild);
+//                    falseChild->addParent(_self, false);
+//                }
+//                else if (a.first == "1"){
+//                    setLeft(trueChild);
+//                    trueChild->addParent(_self, false);
+//                }
+//            }
+//
+//            if (b.second){
+//                if (b.first == "0"){
+//                    setRight(falseChild);
+//                    falseChild->addParent(_self, true);
+//                }
+//                else if (b.first == "1"){
+//                    setRight(trueChild);
+//                    trueChild->addParent(_self, true);
+//                }
+//            }
+//            return make_pair(_value, false);
+//        }
+//    }
+//}
 
 bool BDTNode::isTerminal() {
     return _left == nullptr && _right == nullptr;
@@ -387,4 +456,13 @@ string BDTNode::substituteVariable(string formula, string var, string sub) {
     );
 
     return formula;
+}
+
+string BDTNode::toString() {
+    if (isTerminal()){
+        return "["+getValue()+"]";
+    }
+    else{
+        return "{" + _left->toString() + "," + _right->toString() + "}";
+    }
 }

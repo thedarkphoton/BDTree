@@ -27,12 +27,13 @@ public:
     BDTree(string& _formula);
     ~BDTree();
 
-    void minimize();
+//    void minimize();
 
     shared_ptr<BDTNode>& getRoot();
     vector<shared_ptr<BDTNode> >& getLeafs();
 
     string toString();
+    string rootToString();
 };
 
 ostream& operator<<(ostream& os, BDTree& t);

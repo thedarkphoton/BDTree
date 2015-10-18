@@ -30,7 +30,8 @@ BDTree::BDTree(string& formula)
     shared_ptr<BDTNode> leaf_right(new BDTNode(one));
     leaf_right->setSelf(leaf_right);
 
-    _root->generateChildren(formula, _root, names, leaf_left, leaf_right);
+    vector<shared_ptr<BDTNode> > internal_nodes;
+    _root->generateChildren(formula, _root, names, leaf_left, leaf_right, internal_nodes);
 
     if (leaf_left->getParentCount() > 0)
         _leafs.push_back(leaf_left);
@@ -49,33 +50,41 @@ vector<shared_ptr<BDTNode> >& BDTree::getLeafs() {
     return _leafs;
 }
 
-void BDTree::minimize() {
-    string nil = "0";
-    string one = "1";
-
-    shared_ptr<BDTNode> nilNode(new BDTNode(nil));
-    nilNode->setSelf(nilNode);
-    shared_ptr<BDTNode> oneNode(new BDTNode(one));
-    oneNode->setSelf(oneNode);
-    _root->minimize(nilNode, oneNode);
-
-    _leafs.clear();
-
-    if (nilNode->getParentCount() > 0)
-        _leafs.push_back(nilNode);
-
-    if (oneNode->getParentCount() > 0)
-        _leafs.push_back(oneNode);
-}
+//void BDTree::minimize() {
+//    string nil = "0";
+//    string one = "1";
+//
+//    shared_ptr<BDTNode> nilNode(new BDTNode(nil));
+//    nilNode->setSelf(nilNode);
+//    shared_ptr<BDTNode> oneNode(new BDTNode(one));
+//    oneNode->setSelf(oneNode);
+//    _root->minimize(nilNode, oneNode);
+//
+//    _leafs.clear();
+//
+//    if (nilNode->getParentCount() > 0)
+//        _leafs.push_back(nilNode);
+//
+//    if (oneNode->getParentCount() > 0)
+//        _leafs.push_back(oneNode);
+//}
 
 string BDTree::toString(){
-    string s_paths = "";
+    string s_paths = "formula "+ _formula;
+
+    if (_leafs.size() == 1){
+        if (_leafs[0]->getValue() == "1")
+            return s_paths + " is a tautology";
+        else
+            return s_paths + " is a contradiction";
+    }
+
     for (int i = 0; i < _leafs.size(); ++i) {
         vector<vector<BDTParent> > paths;
         vector<BDTParent> path;
         _leafs[i]->paths_from_root(paths, path);
 
-        string s_path = _leafs[i]->getValue() == "0" ? "false:{\n" : "true:{\n";
+        string s_path = _leafs[i]->getValue() == "0" ? "\nfalse:{\n" : "\ntrue:{\n";
         for (int j = 0; j < paths.size(); ++j) {
             path = paths[j];
             s_path += "\t case " + to_string(j + 1) + ": ";
@@ -86,7 +95,7 @@ string BDTree::toString(){
             }
             s_path += "\n";
         }
-        s_path += "}\n";
+        s_path += "}";
 
         s_paths += s_path;
     }
@@ -97,4 +106,8 @@ string BDTree::toString(){
 ostream& operator<<(ostream& os, BDTree& t) {
     os << t.toString();
     return os;
+}
+
+string BDTree::rootToString() {
+    return _root->toString();
 }

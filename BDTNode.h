@@ -21,7 +21,7 @@ class BDTNode {
     string _value;
 
     string substituteVariable(string formula, string var, string sub);
-    void minimize();
+    void minimize(vector<shared_ptr<BDTNode> >& internal_nodes);
 
 protected:
 
@@ -30,20 +30,22 @@ public:
     BDTNode(BDTParent parent, string& name);
     ~BDTNode();
 
-    void generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, shared_ptr<BDTNode>& leaf_left, shared_ptr<BDTNode>& leaf_right);
+    void generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, shared_ptr<BDTNode>& leaf_left, shared_ptr<BDTNode>& leaf_right, vector<shared_ptr<BDTNode> >& internal_nodes);
     void setSelf(shared_ptr<BDTNode>& self);
 
     void paths_from_root(vector<vector<BDTParent> >& paths, vector<BDTParent>& path);
     vector<BDTParent> shortest_path();
     void parseFormula(string formula);
     string evaluateFormula(string formula);
-    pair<string, bool> minimize(shared_ptr<BDTNode>& falseChild, shared_ptr<BDTNode>& trueChild);
+//    pair<string, bool> minimize(shared_ptr<BDTNode>& falseChild, shared_ptr<BDTNode>& trueChild);
 
     string getValue();
 
     vector<BDTParent>& getParents();
     bool addParent(shared_ptr<BDTNode>& node, bool branch);
     bool removeParent(shared_ptr<BDTNode>& node, bool branch);
+    bool removeParent(shared_ptr<BDTNode>& node);
+    bool removeParentRecursive(shared_ptr<BDTNode>& node);
     unsigned long getParentCount();
     BDTParent& getParent(int index);
 
@@ -51,12 +53,14 @@ public:
     shared_ptr<BDTNode>& getLeft();
 
     bool setRight(shared_ptr<BDTNode>& child);
-    shared_ptr<BDTNode>& getTrue();
+    shared_ptr<BDTNode>& getRight();
 
     bool isTerminal();
     bool isInternal();
     bool isRoot();
     bool isNull();
+
+    string toString();
 };
 
 

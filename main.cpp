@@ -4,7 +4,7 @@
 using namespace std;
 
 int main() {
-    string formula = "(a&b)|(c&d)";
+    string formula = "(A|!B)&(A|!B)";
     BDTree tree(formula);
 
     cout << tree;
