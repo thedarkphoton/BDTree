@@ -21,7 +21,22 @@ BDTree::BDTree(string& formula)
     string name = _names.substr(0, 1);
     string names = _names.substr(1, _names.size() - 1);
     _root = shared_ptr<BDTNode>(new BDTNode(name));
-    _root->generateChildren(formula, _root, names, _leafs);
+
+    string nil = "0";
+    string one = "1";
+
+    shared_ptr<BDTNode> leaf_left(new BDTNode(nil));
+    leaf_left->setSelf(leaf_left);
+    shared_ptr<BDTNode> leaf_right(new BDTNode(one));
+    leaf_right->setSelf(leaf_right);
+
+    _root->generateChildren(formula, _root, names, leaf_left, leaf_right);
+
+    if (leaf_left->getParentCount() > 0)
+        _leafs.push_back(leaf_left);
+
+    if (leaf_right->getParentCount() > 0)
+        _leafs.push_back(leaf_right);
 }
 
 BDTree::~BDTree() { }
@@ -77,4 +92,9 @@ string BDTree::toString(){
     }
 
     return s_paths;
+}
+
+ostream& operator<<(ostream& os, BDTree& t) {
+    os << t.toString();
+    return os;
 }

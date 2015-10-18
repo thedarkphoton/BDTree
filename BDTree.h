@@ -35,5 +35,6 @@ public:
     string toString();
 };
 
+ostream& operator<<(ostream& os, BDTree& t);
 
 #endif //BDT_GENERATOR_BDTREE_H

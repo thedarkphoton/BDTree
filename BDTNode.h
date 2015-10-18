@@ -21,6 +21,8 @@ class BDTNode {
     string _value;
 
     string substituteVariable(string formula, string var, string sub);
+    void minimize();
+
 protected:
 
 public:
@@ -28,7 +30,7 @@ public:
     BDTNode(BDTParent parent, string& name);
     ~BDTNode();
 
-    void generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, vector<shared_ptr<BDTNode> >& leafs);
+    void generateChildren(string formula, shared_ptr<BDTNode>& self, string& names, shared_ptr<BDTNode>& leaf_left, shared_ptr<BDTNode>& leaf_right);
     void setSelf(shared_ptr<BDTNode>& self);
 
     void paths_from_root(vector<vector<BDTParent> >& paths, vector<BDTParent>& path);
@@ -48,7 +50,7 @@ public:
     bool setLeft(shared_ptr<BDTNode>& child);
     shared_ptr<BDTNode>& getLeft();
 
-    bool setTrue(shared_ptr<BDTNode>& child);
+    bool setRight(shared_ptr<BDTNode>& child);
     shared_ptr<BDTNode>& getTrue();
 
     bool isTerminal();
